@@ -1,20 +1,15 @@
 # Aporu - 日程調整ツール
 
-ビジネス向け日程調整ツール「調整アポ」のようなサービス。
-
-## 概要
-
-日程調整を自動化するSaaSサービス。カレンダー連携により、複数人の空き日時を自動ピックアップし、専用URLで日程調整を完了できます。
+ビジネス向け日程調整SaaSサービス。カレンダー連携により空き日時を自動ピックアップし、専用URLで日程調整を完了できます。
 
 ## 主な機能
 
-- カレンダー連携（Google Calendar、Outlook 等）
+- **予約受付型**: 予約ページURLを共有し、ゲストが空き時間から選択
+- **候補提案型**: 複数の日程候補を提示し、ゲストが候補から1つ選択
+- カレンダー連携（Google Calendar、Outlook）
 - 空き日時の自動ピックアップ
-- 専用URLによる日程調整
-- カレンダーへの予定自動確保
-- WEB会議URL自動発行（Zoom、Teams 等）
+- WEB会議URL自動発行（Zoom、Teams）
 - リマインドメール自動送信
-- SFA連携（Salesforce 等）
 
 ## 技術スタック
 
@@ -22,28 +17,23 @@
 - **UIコンポーネント**: shadcn-svelte
 - **言語**: TypeScript
 - **スタイリング**: Tailwind CSS
+- **DB**: Prisma + SQLite（開発）/ PostgreSQL（本番）
 
-## プロジェクト構成（予定）
+## 開発
 
-```
-aporu/
-├── src/
-│   ├── routes/           # ページルーティング
-│   ├── lib/              # 共通ライブラリ
-│   ├── components/       # UIコンポーネント
-│   └── stores/           # 状態管理
-├── static/               # 静的アセット
-└── tests/                # テストコード
+```sh
+npm install
+npx prisma generate
+npx prisma migrate dev
+npm run dev
 ```
 
-## 開発ステータス
+## ビルド
 
-- [x] プロジェクト初期化
-- [ ] SvelteKitセットアップ
-- [ ] shadcn-svelte導入
-- [ ] 認証機能実装
-- [ ] カレンダー連携
-- [ ] 日程調整ロジック実装
+```sh
+npm run build
+npm run preview
+```
 
 ## 参考サイト
 
