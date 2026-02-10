@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ==========================================
+// 認証・ユーザー
+// ==========================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatarUrl String?
+
+  // OAuth トークン
+  googleAccessToken    String?
+  googleRefreshToken   String?
+  microsoftAccessToken  String?
+  microsoftRefreshToken String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  sessions      Session[]
+  bookingPages  BookingPage[]
+  appointments  Appointment[]  @relation("HostAppointments")
+  proposalGroups ProposalGroup[]
+  teamMembers   TeamMember[]
+  ownedTeams    Team[]         @relation("TeamOwner")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ==========================================
+// チーム
+// ==========================================
+
+model Team {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
+
+  ownerId String
+  owner   User   @relation("TeamOwner", fields: [ownerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members      TeamMember[]
+  bookingPages BookingPage[]
+}
+
+model TeamMember {
+  id     String @id @default(cuid())
+  role   String @default("member") // "admin" | "member"
+
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+}
+
+// ==========================================
+// 予約受付型（Booking Type）
+// ==========================================
+
+model BookingPage {
+  id          String  @id @default(cuid())
+  title       String
+  slug        String  @unique
+  description String?
+
+  // 所有者（個人 or チーム）
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  teamId String?
+  team   Team?   @relation(fields: [teamId], references: [id])
+
+  // 設定
+  duration     Int     @default(30)   // 分単位
+  bufferBefore Int     @default(0)    // 前バッファ（分）
+  bufferAfter  Int     @default(0)    // 後バッファ（分）
+  minNotice    Int     @default(60)   // 最小通知時間（分）
+  maxDaysAhead Int     @default(30)   // 最大何日先まで予約可能
+
+  // 受付可能時間（JSON: 曜日ごとの時間帯）
+  // 例: {"mon": [{"start": "09:00", "end": "17:00"}], "tue": [...]}
+  availableHours String @default("{}")
+
+  // 状態
+  isActive Boolean @default(true)
+
+  // カスタムフィールド（JSON配列: アンケート/事前情報収集用）
+  customFields String @default("[]")
+
+  // ゲストによるキャンセル・変更を許可
+  allowGuestCancel Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments Appointment[]
+}
+
+// ==========================================
+// アポイントメント（予約確定）
+// ==========================================
+
+model Appointment {
+  id   String @id @default(cuid())
+  type String @default("booking") // "booking" | "proposal"
+
+  // 予約受付型の場合
+  bookingPageId String?
+  bookingPage   BookingPage? @relation(fields: [bookingPageId], references: [id])
+
+  // 候補提案型の場合
+  proposalGroupId String?
+  proposalGroup   ProposalGroup? @relation(fields: [proposalGroupId], references: [id])
+
+  // ホスト
+  hostUserId String
+  hostUser   User   @relation("HostAppointments", fields: [hostUserId], references: [id])
+
+  // ゲスト情報
+  guestName    String
+  guestEmail   String
+  guestCompany String?
+  guestPhone   String?
+
+  // 日時
+  startTime DateTime
+  endTime   DateTime
+
+  // ステータス
+  status String @default("confirmed") // "pending" | "confirmed" | "cancelled"
+
+  // 会議関連
+  meetingUrl      String?
+  calendarEventId String?
+  location        String?
+
+  // メモ・カスタムフィールド回答
+  notes        String?
+  customValues String @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reminders Reminder[]
+}
+
+// ==========================================
+// 候補提案型（Proposal Type）
+// ==========================================
+
+model ProposalGroup {
+  id    String @id @default(cuid())
+  title String
+  slug  String @unique
+
+  // ホスト
+  hostUserId String
+  hostUser   User   @relation(fields: [hostUserId], references: [id])
+
+  // ゲスト情報
+  guestName  String?
+  guestEmail String?
+
+  // 設定
+  duration Int @default(60) // 分単位
+  location String?
+  notes    String?
+
+  // ステータス
+  status String @default("pending") // "pending" | "confirmed" | "expired" | "cancelled"
+
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  slots        ProposalSlot[]
+  appointments Appointment[]
+}
+
+model ProposalSlot {
+  id String @id @default(cuid())
+
+  proposalGroupId String
+  proposalGroup   ProposalGroup @relation(fields: [proposalGroupId], references: [id], onDelete: Cascade)
+
+  startTime DateTime
+  endTime   DateTime
+
+  // ゲストがこの候補を選択したか
+  isSelected Boolean @default(false)
+
+  // カレンダー仮押さえ用のイベントID
+  calendarHoldEventId String?
+
+  createdAt DateTime @default(now())
+}
+
+// ==========================================
+// リマインダー
+// ==========================================
+
+model Reminder {
+  id String @id @default(cuid())
+
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  sendAt DateTime
+  sent   Boolean @default(false)
+  sentAt DateTime?
+
+  createdAt DateTime @default(now())
+}
