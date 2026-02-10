@@ -1,0 +1,17 @@
+name = "aporu"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Pages用設定
+pages_build_output_dir = ".svelte-kit/output"
+
+# D1データベースバインディング
+[[d1_databases]]
+binding = "DB"
+database_name = "aporu-db"
+database_id = "0447303d-7e29-42cc-bc4e-057ebec7852f"  # wrangler d1 create aporu-db で取得
+
+# 環境変数
+[vars]
+ENVIRONMENT = "production"
+APP_URL = "https://aporu.pages.dev"
